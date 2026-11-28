@@ -145,11 +145,13 @@ function createBeeSwarmActors(swarmSpawn) {
 // least a +104 magic attack bonus with Augury, or +140 without Augury, to
 // guarantee a freeze" on each of the three (but "This will not guarantee a
 // max hit"). The wiki gives bonuses, not a roll; inferred: the bar is a
-// magic attack roll, the one of 99 Magic, no prayer, +140:
-// (99 + 8) * (140 + 64) = 21828. With Augury that is +104 (131 * 168 =
-// 22008; +103 also clears it at 21877). The berserker page's elite void
-// line (+52 with Augury) comes out a little short: 186 * 116 = 21576.
-const warbandIceBarrageSureFreezeAttackRoll = 21828;
+// magic attack roll, the one of 99 Magic, no prayer, +140, with the effective
+// level of engine/combatFormulas.js (getEffectiveMagicAttackLevel: + 9):
+// (99 + 9) * (140 + 64) = 22032; +139 falls short at 21924. With Augury that
+// is +104 (132 * 168 = 22176; +103 also clears it at 22044, +102 does not at
+// 21912). The berserker page's elite void line (+52 with Augury) comes out a
+// little short: 187 * 116 = 21692. Change this with that formula.
+const warbandIceBarrageSureFreezeAttackRoll = (99 + 9) * (140 + 64);
 function createWarbanderActor(warbanderSpawn) {
   const roleProfile = warbanderRoleConfigs[warbanderSpawn.role];
   const hitpoints = getMonsterHitpoints(roleProfile.npcTypeId);
