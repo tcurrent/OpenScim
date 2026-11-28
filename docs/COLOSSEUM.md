@@ -237,6 +237,10 @@ No source says these. Each is marked "inferred" where it stands in the code.
   seen.
 - With Minimus switched off, the next wave starts on the tick his
   interface would open; after wave 11 the victory comes on that tick.
+- With Minimus, his offer after wave 11 is drawn as the others are, from
+  all fourteen modifiers; the choice leads into Sol Heredit's fight with the
+  run's modifiers that his fight has, and with his own loadout: the
+  hitpoints and supplies left of the waves are not carried over.
 - Which modifiers are offered after wave 1 (above), and everything the
   table of the modifiers marks as inferred.
 - A walk order given while Minimus holds the player is walked when he lets

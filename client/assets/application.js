@@ -50924,6 +50924,14 @@ function AppShell({ devHarness: devHarness } = {}) {
       }
     }
   }, [enterLobby, h6, sceneState]);
+  // An outcome that names a `next` fight hands the run over to it: the
+  // Colosseum's waves to Sol Heredit (ColosseumEncounter.startWave).
+  const nextFight = kN || replay.replayMode ? undefined : simulationState.encounterOutcome.next;
+  (0, React.useEffect)(() => {
+    if (nextFight) {
+      enterEncounter(nextFight.encounterKind, undefined, { modifiers: nextFight.modifiers });
+    }
+  }, [nextFight]);
   const r5 = cE.getDescriptorOfKindOrVariant(simulationState.encounter.kind)?.victory;
   const r6 = (r7 = {
     outcomePhase: simulationState.encounterOutcome.phase,

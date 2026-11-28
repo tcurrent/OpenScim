@@ -10,9 +10,11 @@
 // arrive, unless the wave is cleared by then. A wave is cleared when every
 // monster placed for it has been defeated, and completed on the first tick
 // on which none of them is left in the world. Three ticks after that Minimus
-// comes; after wave 11 the run is won instead. With the choice of modifiers
-// switched off in the set-up there is no Minimus: the first wave starts with
-// the run and the next one three ticks after a wave is completed.
+// comes; after wave 11 too, and the choice made there leads into Sol
+// Heredit's fight (startWave). With the choice of modifiers switched off in
+// the set-up there is no Minimus: the first wave starts with the run and the
+// next one three ticks after a wave is completed; after wave 11 the run is
+// won.
 //
 // The order of the hooks within one tick (docs/ARCHITECTURE.md, "One tick"):
 //   0. executeCommand    a click on Minimus; the player's choice of a
@@ -37,7 +39,7 @@ import { defineNpc, NpcDefinitionRegistry } from "../shared/npcDefinitions.js";
 import { solMessageColors } from "../sol-heredit/constants.js";
 import { warbanderSlotOffsets, warbanderNpcDefinition } from "../sol-heredit/minions.js";
 import { createWarbanderActor } from "../sol-heredit/modifierEffects.js";
-import { SolModifierState } from "../sol-heredit/modifiers.js";
+import { solHereditModifiers, SolModifierState } from "../sol-heredit/modifiers.js";
 import {
   colosseumKind,
   colosseumMapSquare,
@@ -418,7 +420,7 @@ export class ColosseumEncounter {
         encounterSeed: command.type === retryWaveCommandType ? this.encounterSeed : Math.floor(Math.random() * 4294967296),
         modifiers: { ...this.modifiersAtWaveStart },
       },
-      runMechanics: { [colosseumStartWaveKey]: String(this.wave) },
+      runMechanics: { [colosseumStartWaveKey]: String(Math.min(this.wave, lastWave)) },
       ...(this.playerTileBeforePlacing ? { startPosition: [...this.playerTileBeforePlacing] } : {}),
     };
   }
@@ -448,7 +450,7 @@ export class ColosseumEncounter {
     // OBS: Minimus is gone on the tick the interface closes, and the monsters
     // appear 5 ticks after it.
     context.despawnNpc(minimus.actorId);
-    this.beginWave(this.wave, context.tick);
+    this.startWave(context);
     return { gameEvents: [] };
   }
   // Frailty. The engine lowers the player's hitpoints by the rules' fraction
@@ -509,7 +511,10 @@ export class ColosseumEncounter {
   awaitChoice(wave, phase, minimusTick) {
     this.wave = wave;
     this.phase = phase;
-    this.modifiersAtWaveStart = { ...this.modifiers };
+    // Before Sol Heredit a practice restart is still one of the last wave.
+    if (wave <= lastWave) {
+      this.modifiersAtWaveStart = { ...this.modifiers };
+    }
     this.playerTileBeforePlacing = null;
     this.minimusTick = minimusTick;
     this.placeTick = null;
@@ -561,10 +566,23 @@ export class ColosseumEncounter {
     const options = buildModifierOffer(this.modifiers, this.wave, createWaveOfferShuffle(this.encounterSeed, this.wave));
     if (options.length === 0 && context) {
       context.despawnNpc(minimus.actorId);
-      this.beginWave(this.wave, context.tick);
+      this.startWave(context);
       return;
     }
     this.offer = { requestId: ++this.offerRequests, wave: this.wave, options };
+  }
+  // The choice is made: the wave begins, or after the last wave the run goes
+  // on as Sol Heredit's fight (WIKI: wave 12), an encounter of its own. The
+  // application enters the fight an outcome names as `next`, with the
+  // modifiers of the run that his fight has.
+  startWave(context) {
+    if (this.wave <= lastWave) {
+      this.beginWave(this.wave, context.tick);
+      return;
+    }
+    this.phase = "completed";
+    const modifiers = Object.fromEntries(Object.entries(this.modifiers).filter(([id]) => solHereditModifiers.some((modifier) => modifier.id === id)));
+    this.outcome = { phase: "active", next: { encounterKind: "sol_heredit", modifiers } };
   }
   // A wave begins on `startTick`; its monsters are placed five ticks later.
   beginWave(wave, startTick) {
@@ -653,7 +671,8 @@ export class ColosseumEncounter {
     return buildLosLink(monsters, context.playerPos, { isWaveStart, mantimayhem: this.modifiers.mantimayhem ?? 0 });
   }
   // The wave's last monster has left the world: the line that says so, then
-  // Minimus, the next wave, or after the last one the victory.
+  // Minimus, the next wave, or after the last one his offer before Sol
+  // Heredit (without Minimus, the victory).
   completeWave(context) {
     // OBS: the duration counts from the tick of "Wave: N", and it is red.
     const seconds = Math.round((context.tick - this.placeTick) * secondsPerTick);
@@ -679,6 +698,12 @@ export class ColosseumEncounter {
       } else {
         this.beginWave(this.wave + 1, interfaceTick);
       }
+      return;
+    }
+    // WIKI: Minimus offers a modifier before Sol Heredit too. The tutorial
+    // may own the completion of a run; then there is no offer.
+    if (this.choosing && this.lastDefeat.encounterOwned) {
+      this.awaitChoice(this.wave + 1, "intermission", interfaceTick);
       return;
     }
     this.phase = "completed";
